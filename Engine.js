@@ -26,6 +26,7 @@ var exp_phase = 0;
 var BoxStorage = [];
 var ExplodeStorage = [];
 var Timer;
+var score = 0;
 
 
 function getCanvas() 
@@ -124,6 +125,14 @@ function ClearScr()
 	context.fillRect(0, 0, cWidth, cHeight);
 }
 
+function DrawScore(Score) {
+	context.fillStyle = "#b06834";
+	context.strokeStyle = "#555555";
+	context.fillText("Score: "+Score, 10, 20);	 
+	context.fill();
+	
+}
+
 function PointInBox(px, py, bx, by, bs)
 {
 	var x1 = bx-bs/2;
@@ -177,10 +186,43 @@ function DrawExplode(x, y, r)
 	context.stroke();
 	context.fill();
 }
+
+function RecalcBoxCoord(Storage) { 			//Физика обсчитывается так же, как и у шарика 
+	for(var i=0; i<Storage.length; i++) {
+		x = Storage[i][0];
+		y = Storage[i][1];
+		var curVY = Storage[i][2] + gravVecY;
+		y = y + curVY * VEC_STRENGTH;
+		var collision = false;
+		var cY; //Y ящика с которым есть коллизия
+		for(j=0; j<Storage.length; j++) { //ищем коллизии
+			if (i!=j) {
+				var curX = Storage[j][0];
+				var curY = Storage[j][1];
+				if ((Math.abs(x-curX) <boxSize) && ((curY - y) > 0) && ((curY - y) < boxSize)) {
+					collision = true;
+					cY = curY;
+					break;
+				}
+			}
+		}
+		if ((y >= (cHeight - boxSize/2)) || (collision)) {
+			curVY = 0;
+			if (!collision) {
+				y = cHeight - boxSize/2;
+			}
+			else
+				y = cY - boxSize;
+		}		
+		Storage[i][1] = y;
+		Storage[i][2] = curVY;
+	}
+}
  
 function tFunc()
 {
 	ClearScr();
+	DrawScore(score);
 	//DrawBallBF(curMX, curMY, 6);
 	if ( curST == ST_START )
 	{
@@ -196,6 +238,7 @@ function tFunc()
 	}
 	else
 	{
+		RecalcBoxCoord(BoxStorage);
 		if ( curST == ST_STRETCHING )
 		{
 			t = 0;
@@ -256,6 +299,10 @@ function ExplodeIt() {
 		context.fillStyle = "#FF0000";
 		context.strokeStyle = "#FF0000";
 		DrawExplode(x, y, boxSize * (exp_phase) / 20);
+		if ( exp_phase == 1 )
+		{
+			score++;				
+		}
 		ExplodeStorage[i][2]++;		
 		if ( exp_phase > 35 )
 		{
@@ -348,7 +395,7 @@ function addBox(X, Y, Storage) {
 	}
 	
 	if (!Found) {
-		Storage.push([X, Y]);
+		Storage.push([X, Y, 0]);
 	}
 }
 
