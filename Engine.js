@@ -7,7 +7,7 @@ var curMY = 0;
 var ST_START = 0; 
 var ST_STRETCHING = 1;
 var ST_PHYSICS = 2;
-var ST_EXPLODE = 3;
+var ST_FAKESTATE = 3;
 var curST = 0;
 var startStrethX = 0;
 var startStrethY = 0;
@@ -187,7 +187,8 @@ function DrawExplode(x, y, r)
 	context.fill();
 }
 
-function RecalcBoxCoord(Storage) { 			//Физика обсчитывается так же, как и у шарика 
+function RecalcBoxCoord(Storage) { 			//Физика обсчитывается так же, как и у шарика 		
+	var isRecalc = false;
 	for(var i=0; i<Storage.length; i++) {
 		x = Storage[i][0];
 		y = Storage[i][1];
@@ -211,18 +212,25 @@ function RecalcBoxCoord(Storage) { 			//Физика обсчитывается так же, как и у шар
 			if (!collision) {
 				y = cHeight - boxSize/2;
 			}
-			else
-				y = cY - boxSize;
-		}		
+			else {
+				y = cY - boxSize;				
+			}
+		}	
+		else {
+			isRecalc = true;
+		}
 		Storage[i][1] = y;
 		Storage[i][2] = curVY;
 	}
+	return isRecalc;
 }
  
 function tFunc()
 {
+	var KillTimer = true;
 	ClearScr();
 	DrawScore(score);
+	DrawBoxes(BoxStorage);
 	//DrawBallBF(curMX, curMY, 6);
 	if ( curST == ST_START )
 	{
@@ -232,13 +240,11 @@ function tFunc()
 			context.fillStyle = "#b06834";
 			context.strokeStyle = "#555555"; 
 			context.lineWidth = 1;
-			DrawBoxes(BoxStorage);
 			ExplodeStorage = [];
-			clearInterval(Timer);			
+			clearInterval(Timer);				
 	}
 	else
-	{
-		RecalcBoxCoord(BoxStorage);
+	{		
 		if ( curST == ST_STRETCHING )
 		{
 			t = 0;
@@ -249,8 +255,7 @@ function tFunc()
 			DrawBallBF(curMX, curMY, ballRad);
 			context.fillStyle = "#b06834";
 			context.strokeStyle = "#555555"; 
-			context.lineWidth = 1;
-			DrawBoxes(BoxStorage);
+			context.lineWidth = 1;			
 		}
 		else
 		{
@@ -265,8 +270,7 @@ function tFunc()
 				DrawBallBF(ballPosX, ballPosY, ballRad);
 				context.fillStyle = "#b06834";
 				context.strokeStyle = "#555555"; 
-				context.lineWidth = 1;
-				DrawBoxes(BoxStorage);				
+				context.lineWidth = 1;							
 				var boxX;
 				var boxY;
 				for(var j=0; j<BoxStorage.length; j++) {
@@ -278,11 +282,17 @@ function tFunc()
 							BoxStorage.splice(j, 1);
 					}
 				}
-				if ((!ExplodeIt()) && (( ballPosX > cWidth ) ||  (ballPosY > cHeight ) || (ballPosX <  0) || (ballPosY < 0)))
+				if ((!ExplodeIt()) && (( ballPosX > cWidth+ballRad ) ||  (ballPosY > cHeight+ballRad ) || (ballPosX <  -ballRad)))
 				{
-					curST = ST_START;					
+					KillTimer = true;					
 				}
-			}			
+				else {
+					KillTimer = false;
+				}
+			}				
+		}
+		if ((!RecalcBoxCoord(BoxStorage)) && (KillTimer) && (curST != ST_STRETCHING)) {
+				curST = ST_START;               				 
 		}
 	}	
 } 
@@ -347,7 +357,7 @@ function onMouseMove(e)
 
 function beginStretch() 
 {
-	if ( curST == ST_START )
+	if ( curST != ST_PHYSICS )
 	{
 		startStrethX = curMX;
 		startStrethY = curMY;
@@ -395,6 +405,7 @@ function addBox(X, Y, Storage) {
 	}
 	
 	if (!Found) {
+		curST = ST_FAKESTATE;
 		Storage.push([X, Y, 0]);
 	}
 }
